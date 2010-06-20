@@ -165,6 +165,13 @@
         return this;
     };
 
+    // Get a list of all repos that this user can push to (including ones that
+    // they are just a collaborator on, and do not own. Must be authenticated.
+    gh.user.prototype.pushable = function (callback, context) {
+        authRequired(authUsername);
+        jsonp("repos/pushable", callback, context);
+    };
+
     // Search users for `query`.
     gh.user.search = function (query, callback, context) {
         jsonp("user/search/" + query, callback, context);
@@ -209,7 +216,29 @@
         post("repos/show/" + this.user + "/" + this.repo, postData);
         return this;
     };
-    // TODO: visibility, collaborators, contributors, network, languages, tags, branches
+    // TODO: collaborators, contributors, network, languages, tags, branches
+
+    // Get all of the collaborators for this repo.
+    gh.repo.prototype.collaborators = function (callback, context) {
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/collaborators",
+              callback,
+              context);
+        return this;
+    };
+
+    // Make this repository private. Authentication required.
+    gh.repo.prototype.setPrivate = function () {
+        authRequired(this.user);
+        post("repo/set/private/" + this.repo);
+        return this;
+    };
+
+    // Make this repository public. Authentication required.
+    gh.repo.prototype.setPublic = function () {
+        authRequired(this.user);
+        post("repo/set/public/" + this.repo);
+        return this;
+    };
 
     // Search for repositories. `opts` may include `start_page` or `language`,
     // which must be capitalized.
