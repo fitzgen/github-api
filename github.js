@@ -216,7 +216,6 @@
         post("repos/show/" + this.user + "/" + this.repo, postData);
         return this;
     };
-    // TODO: tags, branches
 
     // Get all tags in this repo.
     gh.repo.prototype.tags = function (callback, context) {
@@ -250,10 +249,13 @@
         return this;
     };
 
-    // All users who have contributed to this repo.
-    // TODO: anon users
-    gh.repo.prototype.contributors = function (callback, context) {
-        jsonp("repos/show/" + this.user + "/" + this.repo + "/contributors",
+    // All users who have contributed to this repo. Pass true to showAnon if you
+    // want to see the non-github contributors.
+    gh.repo.prototype.contributors = function (callback, context, showAnon) {
+        var url = "repos/show/" + this.user + "/" + this.repo + "/contributors";
+        if (showAnon)
+            url += "/anon";
+        jsonp(url,
               callback,
               context);
         return this;
