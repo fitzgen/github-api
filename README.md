@@ -20,12 +20,12 @@ COMPLETE
 
 * Authentication
 * Users
-* Most of Repos
+* Repos
+* Commits
 
 TODO
 ====
 
-* Commits
 * Issues
 * Objects
 * Gists
