@@ -331,4 +331,39 @@
         return this;
     };
 
+    /*
+     * Commits
+     */
+
+    gh.commit = function (user, repo, sha) {
+        if ( !(this instanceof gh.commit) )
+            return new gh.commit(user, repo, sha);
+        this.user = user;
+        this.repo = repo;
+        this.sha = sha;
+    };
+
+    gh.commit.prototype.show = function (callback, context) {
+        jsonp("commits/show/" + this.user + "/" + this.repo + "/" + this.sha,
+              callback,
+              context);
+        return this;
+    };
+
+    // Get a list of all commits on a repos branch.
+    gh.commit.forBranch = function (user, repo, branch, callback, context) {
+        jsonp("commits/list/" + user + "/" + repo + "/" + branch,
+              callback,
+              context);
+        return this;
+    };
+
+    // Get a list of all commits on this path (file or dir).
+    gh.commit.forPath = function (user, repo, branch, path, callback, context) {
+        jsonp("commits/list/" + user + "/" + repo + "/" + branch + "/" + path,
+              callback,
+              context);
+        return this;
+    };
+
 }(window));
