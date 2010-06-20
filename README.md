@@ -22,11 +22,11 @@ COMPLETE
 * Users
 * Repos
 * Commits
+* Issues
 
 TODO
 ====
 
-* Issues
 * Objects
 * Gists
 * Network
