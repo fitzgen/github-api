@@ -260,11 +260,24 @@
     };
 
     // Get all of the collaborators for this repo.
-    // TODO: add/remove
     gh.repo.prototype.collaborators = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/collaborators",
               callback,
               context);
+        return this;
+    };
+
+    // Add a collaborator to this project. Must be authenticated.
+    gh.repo.prototype.addCollaborator = function (collaborator) {
+        authRequired(this.user);
+        post("repos/collaborators/" + this.repo + "/add/" + collaborator);
+        return this;
+    };
+
+    // Remove a collaborator from this project. Must be authenticated.
+    gh.repo.prototype.removeCollaborator = function (collaborator) {
+        authRequired(this.user);
+        post("repos/collaborators/" + this.repo + "/remove/" + collaborator);
         return this;
     };
 
