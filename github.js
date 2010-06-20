@@ -366,4 +366,113 @@
         return this;
     };
 
+    /*
+     * Issues
+     */
+
+    gh.issue = function (user, repo, number) {
+        if ( !(this instanceof gh.issue) )
+            return new gh.commit(user, repo, number);
+        this.user = user;
+        this.repo = repo;
+        this.number = number;
+    };
+
+    // View this issue's info.
+    gh.issue.prototype.show = function (callback, context) {
+        jsonp("issues/show/" + this.user + "/" + this.repo + "/" + this.number,
+              callback,
+              context);
+        return this;
+    };
+
+    // Get a list of all comments on this issue.
+    gh.issue.prototype.comments = function (callback, context) {
+        jsonp("issues/comments/" + this.user + "/" + this.repo + "/" + this.number,
+              callback,
+              context);
+        return this;
+    };
+
+    // Close this issue.
+    gh.issue.prototype.close = function () {
+        authRequired(this.user);
+        post("issues/close/" + this.user + "/" + this.repo + "/" + this.number);
+        return this;
+    };
+
+    // Reopen this issue.
+    gh.issue.prototype.reopen = function () {
+        authRequired(this.user);
+        post("issues/reopen/" + this.user + "/" + this.repo + "/" + this.number);
+        return this;
+    };
+
+    // Reopen this issue.
+    gh.issue.prototype.update = function (title, body) {
+        authRequired(this.user);
+        post("issues/edit/" + this.user + "/" + this.repo + "/" + this.number, {
+            title: title,
+            body: body
+        });
+        return this;
+    };
+
+    // Add `label` to this issue. If the label is not yet in the system, it will
+    // be created.
+    gh.issue.prototype.addLabel = function (label) {
+        post("issues/label/add/" + this.user + "/" + this.repo + "/" + label + "/" + this.number);
+        return this;
+    };
+
+    // Remove a label from this issue.
+    gh.issue.prototype.removeLabel = function (label) {
+        post("issues/label/remove/" + this.user + "/" + this.repo + "/" + label + "/" + this.number);
+        return this;
+    };
+
+    // Comment on this issue as the user that is authenticated.
+    gh.issue.prototype.comment = function (comment) {
+        authRequired(authUsername);
+        post("/issues/comment/" + user + "/" + repo + "/" + this.number, {
+            comment: comment
+        });
+        return this;
+    };
+
+    // Get all issues' labels for the repo.
+    gh.issue.labels = function (user, repo) {
+        jsonp("issues/labels/" + user + "/" + repo,
+              callback,
+              context);
+        return this;
+    };
+
+    // Open an issue. Must be authenticated.
+    gh.issue.open = function (repo, title, body) {
+        authRequired(authUsername);
+        post("issues/open/" + authUsername + "/" + repo, {
+            title: title,
+            body: body
+        });
+        return this;
+    };
+
+    // Search a repository's issue tracker. `state` can be "open" or "closed".
+    gh.issue.search = function (user, repo, state, query, callback, context) {
+        jsonp("/issues/search/" + user + "/" + repo + "/" + state + "/" + query,
+              callback,
+              context);
+        return this;
+    };
+
+    // Get a list of issues for the given repo. `state` can be "open" or
+    // "closed".
+    gh.issue.list = function (user, repo, state, callback, context) {
+        jsonp("issues/list/" + user + "/" + repo + "/" + state,
+              callback,
+              context);
+        return this;
+    };
+
 }(window));
