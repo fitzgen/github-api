@@ -216,7 +216,39 @@
         post("repos/show/" + this.user + "/" + this.repo, postData);
         return this;
     };
-    // TODO: network, languages, tags, branches
+    // TODO: tags, branches
+
+    // Get all tags in this repo.
+    gh.repo.prototype.tags = function (callback, context) {
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/tags",
+              callback,
+              context);
+        return this;
+    };
+
+    // Get all branches in this repo.
+    gh.repo.prototype.branches = function (callback, context) {
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/branches",
+              callback,
+              context);
+        return this;
+    };
+
+    // Gather line count information on the language(s) used in this repo.
+    gh.repo.prototype.languages = function (callback, context) {
+        jsonp("/repos/show/" + this.user + "/" + this.repo + "/languages",
+              callback,
+              context);
+        return this;
+    };
+
+    // Gather data on all the forks of this repo.
+    gh.repo.prototype.network = function (callback, context) {
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/network",
+              callback,
+              context);
+        return this;
+    };
 
     // All users who have contributed to this repo.
     // TODO: anon users
