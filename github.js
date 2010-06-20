@@ -216,9 +216,19 @@
         post("repos/show/" + this.user + "/" + this.repo, postData);
         return this;
     };
-    // TODO: collaborators, contributors, network, languages, tags, branches
+    // TODO: network, languages, tags, branches
+
+    // All users who have contributed to this repo.
+    // TODO: anon users
+    gh.repo.prototype.contributors = function (callback, context) {
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/contributors",
+              callback,
+              context);
+        return this;
+    };
 
     // Get all of the collaborators for this repo.
+    // TODO: add/remove
     gh.repo.prototype.collaborators = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/collaborators",
               callback,
