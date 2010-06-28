@@ -73,6 +73,17 @@
         return str.replace(/&$/, "");
     },
 
+    // Get around how the GH team haven't migrated all the API to version 2, and
+    // how gists use a different api root.
+    withTempApiRoot = function (tempApiRoot, fn) {
+        return function () {
+            var oldRoot = apiRoot;
+            apiRoot = tempApiRoot;
+            fn.apply(this, arguments);
+            apiRoot = oldRoot;
+        };
+    },
+
     // Expose global gh variable and keep a local variable.
     gh = globals.gh = {};
 
