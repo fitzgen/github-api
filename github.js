@@ -183,6 +183,14 @@
         jsonp("repos/pushable", callback, context);
     };
 
+    gh.user.prototype.publicGists = withTempApiRoot(
+        "http://gist.github.com/api/v1/json/gists/",
+        function (callback, context) {
+            jsonp(this.username, callback, context);
+            return this;
+        }
+    );
+
     // Search users for `query`.
     gh.user.search = function (query, callback, context) {
         jsonp("user/search/" + query, callback, context);
@@ -485,5 +493,28 @@
               context);
         return this;
     };
+
+    gh.gist = function (id) {
+        if ( !(this instanceof gh.gist) ) {
+            return new gh.gist(id);
+        }
+        this.id = id;
+    };
+
+    gh.gist.prototype.show = withTempApiRoot(
+        "http://gist.github.com/api/v1/json/",
+        function (callback, context) {
+            jsonp(this.id, callback, cont);
+            return this;
+        }
+    );
+
+    gh.gist.prototype.file = withTempApiRoot(
+        "http://gist.github.com/raw/v1/json/",
+        function (filename, callback, context) {
+            jsonp(this.id + "/" + filename, callback, cont);
+            return this;
+        }
+    );
 
 }(window));
