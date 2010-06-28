@@ -16,7 +16,7 @@
 
         gh.__jsonp_callbacks[id] = function () {
             delete gh.__jsonp_callbacks[id];
-            callback.apply(context, arguments)
+            callback.apply(context, arguments);
         };
 
         url += "?callback=" + encodeURIComponent("gh.__jsonp_callbacks["+ id +"]");
@@ -36,7 +36,7 @@
         iframe = document.createElement("iframe"),
         doc = iframe.contentDocument !== undefined ?
             iframe.contentDocument :
-            iframe.contentWindow.document;
+            iframe.contentWindow.document,
         key, field;
         vals = vals || {};
 
