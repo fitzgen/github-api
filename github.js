@@ -31,7 +31,7 @@
 
         gh.__jsonp_callbacks[id] = function () {
             delete gh.__jsonp_callbacks[id];
-            callback.apply(context, arguments)
+            callback.apply(context, arguments);
         };
 
         url += "?callback=" + encodeURIComponent("gh.__jsonp_callbacks["+ id +"]");
@@ -56,7 +56,7 @@
         iframe = document.createElement("iframe"),
         doc = iframe.contentDocument !== undefined ?
             iframe.contentDocument :
-            iframe.contentWindow.document;
+            iframe.contentWindow.document,
         key, field;
         vals = vals || {};
 
@@ -93,6 +93,17 @@
         for (key in params) if (params.hasOwnProperty(key))
             str += key + "=" + params[key] + "&";
         return str.replace(/&$/, "");
+    },
+
+    // Get around how the GH team haven't migrated all the API to version 2, and
+    // how gists use a different api root.
+    withTempApiRoot = function (tempApiRoot, fn) {
+        return function () {
+            var oldRoot = apiRoot;
+            apiRoot = tempApiRoot;
+            fn.apply(this, arguments);
+            apiRoot = oldRoot;
+        };
     },
 
     // Expose the global `gh` variable, through which every API method is
@@ -225,6 +236,14 @@
         authRequired(authUsername);
         jsonp("repos/pushable", callback, context);
     };
+
+    gh.user.prototype.publicGists = withTempApiRoot(
+        "http://gist.github.com/api/v1/json/gists/",
+        function (callback, context) {
+            jsonp(this.username, callback, context);
+            return this;
+        }
+    );
 
     // Search users for `query`.
     gh.user.search = function (query, callback, context) {
@@ -531,5 +550,28 @@
               context);
         return this;
     };
+
+    gh.gist = function (id) {
+        if ( !(this instanceof gh.gist) ) {
+            return new gh.gist(id);
+        }
+        this.id = id;
+    };
+
+    gh.gist.prototype.show = withTempApiRoot(
+        "http://gist.github.com/api/v1/json/",
+        function (callback, context) {
+            jsonp(this.id, callback, cont);
+            return this;
+        }
+    );
+
+    gh.gist.prototype.file = withTempApiRoot(
+        "http://gist.github.com/raw/v1/json/",
+        function (filename, callback, context) {
+            jsonp(this.id + "/" + filename, callback, cont);
+            return this;
+        }
+    );
 
 }(window));
