@@ -1,15 +1,30 @@
+// ## Client-side Javascript API wrapper for GitHub
+//
+// Tries to map one-to-one with the GitHub API V2, but in a Javascripty manner.
+
 (function (globals) {
+
+    // Before we implement the API methods, we will define all of our private
+    // variables and helper functions with one `var` statement.
     var
 
-    // Keep authentication variables private.
+    // The username and authentication token of the library's user.
     authUsername,
     authToken,
 
-    // Always using JSON because it is the only way to leverage JSONP.
+    // To save keystrokes when we make JSONP calls to the HTTP API, we will keep
+    // track of the root from which all V2 urls extend.
     apiRoot = "https://github.com/api/v2/json/",
 
     // Send a JSONP request to the Github API that calls `callback` with
-    // `context` as `this`.
+    // the `context` argument as `this`.
+    //
+    // The `url` parameter is concatenated with the apiRoot, for the reasons
+    // mentioned above. The way that we are supporting non-global, anonymous
+    // functions is by sticking them in the globally exposed
+    // `gh.__jsonp_callbacks` object with a "unique" `id` that is the current
+    // time in milliseconds. Once the callback is called, it is deleted from the
+    // object to prevent memory leaks.
     jsonp = function (url, callback, context) {
         var id = +new Date,
         script = document.createElement("script");
@@ -29,7 +44,12 @@
     },
 
     // Send an HTTP POST. Unfortunately, it isn't possible to support a callback
-    // with the resulting data. (Please prove me wrong!)
+    // with the resulting data. (Please prove me wrong if you can!)
+    //
+    // This is implemented with a hack to get around the cross-domain
+    // restrictions on ajax calls. Basically, a form is created that will POST
+    // to the GitHub API URL, stuck inside an iframe so that it won't redirect
+    // this page, and then submitted.
     post = function (url, vals) {
         var
         form = document.createElement("form"),
@@ -57,15 +77,17 @@
         form.submit();
     },
 
-    // Throw a TypeError if the user is not authenticated properly.
+    // This helper function will throw a TypeError if the library user is not
+    // properly authenticated. Otherwise, it silently returns.
     authRequired = function (username) {
         if (!authUsername || !authToken || authUsername !== username) {
             throw new TypeError("gh: Must be authenticated to do that.");
         }
     },
 
-    // Convert an object to a url parameter string, e.g. {foo:1, bar:3} ->
-    // "foo=1&bar=3".
+    // Convert an object to a url parameter string.
+    //
+    //     paramify({foo:1, bar:3}) -> "foo=1&bar=3".
     paramify = function (params) {
         var str = "", key;
         for (key in params) if (params.hasOwnProperty(key))
@@ -73,24 +95,29 @@
         return str.replace(/&$/, "");
     },
 
-    // Expose global gh variable and keep a local variable.
+    // Expose the global `gh` variable, through which every API method is
+    // accessed, but keep a local variable around so we can reference it easily.
     gh = globals.gh = {};
 
     // Psuedo private home for JSONP callbacks (which are required to be global
-    // by the nature of JSONP).
+    // by the nature of JSONP, as discussed earlier).
     gh.__jsonp_callbacks = {};
 
-    // Authenticate a user. Does not try to validate at any point.
+    // Authenticate as a user. Does not try to validate at any point; that job
+    // is up to each individual method, which calls `authRequired` as needed.
     gh.authenticate = function (username, token) {
         authUsername = username;
         authToken = token;
         return this;
     };
 
-    /*
-     * Users
-     */
+    // ### Users
 
+    // The constructor for user objects. Just creating an instance of a user
+    // doesn't fetch any data from GitHub, you need to get explicit about what
+    // you want to do that.
+    //
+    //     var huddlej = gh.user("huddlej");
     gh.user = function (username) {
         if ( !(this instanceof gh.user)) {
             return new gh.user(username);
@@ -98,13 +125,21 @@
         this.username = username;
     };
 
-    // Show basic user info. More info if authenticated.
+    // Show basic user info; you can get more info if you are authenticated as
+    // this user.
+    //
+    //    gh.user("fitzgen").show(function (data) {
+    //        console.log(data.user);
+    //    });
     gh.user.prototype.show = function (callback, context) {
         jsonp("user/show/" + this.username, callback, context);
         return this;
     };
 
-    // Update user info. Must be authenticated as this user.
+    // Update a user's info. You must be authenticated as this user for this to
+    // succeed.
+    //
+    //     TODO: example
     gh.user.prototype.update = function (params) {
         authRequired(this.username);
         var key, postData = {
@@ -120,45 +155,63 @@
         return this;
     };
 
-    // Find out who this user is following.
+    // Get a list of who this user is following.
+    //
+    //     TODO: example
     gh.user.prototype.following = function (callback, context) {
         jsonp("user/show/" + this.username + "/following", callback, context);
     };
 
-    // Find out who is following this user.
+    // Find out what other users are following this user.
+    //
+    //     TODO: example
     gh.user.prototype.followers = function (callback, context) {
         jsonp("user/show/" + this.username + "/followers", callback, context);
     };
 
-    // Make this user follow some other user. Must be authenticated as this
-    // user.
+    // Make this user follow some other user. You must be authenticated as this
+    // user for this to succeed.
+    //
+    //     TODO: example
     gh.user.prototype.follow = function (user) {
         authRequired.call(this);
         post("user/follow/" + user);
         return this;
     };
 
-    // Quit following the given user. Must be authenticated as this user.
+    // Make this user quit following the given `user`. You must be authenticated
+    // as this user to succeed.
+    //
+    //     TODO: example
     gh.user.prototype.unfollow = function (user) {
         authRequired.call(this);
         post("user/unfollow/" + user);
         return this;
     };
 
-    // Find out who this user is watching.
+    // Get a list of repositories that this user is watching.
+    //
+    //     TODO: example
     gh.user.prototype.watching = function (callback, context) {
         jsonp("repos/watched/" + this.username, callback, context);
         return this;
     };
 
-    // Find out what repos this user has.
+    // Get a list of this user's repositories.
+    //
+    //     gh.user("fitzgen").repos(function (data) {
+    //         alert(data.repositories.length);
+    //     });
     gh.user.prototype.repos = function (callback, context) {
         gh.repo.forUser(this.username, callback, context);
         return this;
     };
 
-    // Fork the repo that lives at http://github.com/user/repo. Must be
-    // authenticated.
+    // Make this user fork the repo that lives at
+    // http://github.com/user/repo. You must be authenticated as this user for
+    // this to succeed.
+    //
+    //     gh.user("fitzgen").forkRepo("brianleroux", "wtfjs");
     gh.user.prototype.forkRepo = function (user, repo) {
         authRequired(this.username);
         post("repos/fork/" + user + "/" + repo);
@@ -166,7 +219,8 @@
     };
 
     // Get a list of all repos that this user can push to (including ones that
-    // they are just a collaborator on, and do not own. Must be authenticated.
+    // they are just a collaborator on, and do not own). Must be authenticated
+    // as this user.
     gh.user.prototype.pushable = function (callback, context) {
         authRequired(authUsername);
         jsonp("repos/pushable", callback, context);
@@ -178,10 +232,11 @@
         return this;
     };
 
-    /*
-     * Repositories
-     */
+    // ### Repositories
 
+    // This is the base constructor for creating repo objects. Note that this
+    // won't actually hit the GitHub API until you specify what data you want,
+    // or what action you wish to take via a prototype method.
     gh.repo = function (user, repo) {
         if ( !(this instanceof gh.repo)) {
             return new gh.repo(user, repo);
@@ -190,13 +245,19 @@
         this.user = user;
     };
 
-    // Get information on this repo.
+    // Get basic information on this repo.
+    //
+    //     gh.repo("schacon", "grit").show(function (data) {
+    //         console.log(data.repository.description);
+    //     });
     gh.repo.prototype.show = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo, callback, context);
         return this;
     };
 
-    // Update information on this repo. Must be authenticated. Params can include:
+    // Update the information for this repo. Must be authenticated as the
+    // repository owner. Params can include:
+    //
     //   * description
     //   * homepage
     //   * has_wiki
@@ -217,7 +278,7 @@
         return this;
     };
 
-    // Get all tags in this repo.
+    // Get all tags for this repo.
     gh.repo.prototype.tags = function (callback, context) {
         jsonp("repos/show/" + this.user + "/" + this.repo + "/tags",
               callback,
@@ -249,7 +310,7 @@
         return this;
     };
 
-    // All users who have contributed to this repo. Pass true to showAnon if you
+    // All users who have contributed to this repo. Pass `true` to showAnon if you
     // want to see the non-github contributors.
     gh.repo.prototype.contributors = function (callback, context, showAnon) {
         var url = "repos/show/" + this.user + "/" + this.repo + "/contributors";
@@ -331,9 +392,7 @@
         return this;
     };
 
-    /*
-     * Commits
-     */
+    // ### Commits
 
     gh.commit = function (user, repo, sha) {
         if ( !(this instanceof gh.commit) )
@@ -366,9 +425,7 @@
         return this;
     };
 
-    /*
-     * Issues
-     */
+    // ### Issues
 
     gh.issue = function (user, repo, number) {
         if ( !(this instanceof gh.issue) )
