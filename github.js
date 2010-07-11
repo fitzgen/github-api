@@ -34,7 +34,11 @@
             callback.apply(context, arguments);
         };
 
-        url += "?callback=" + encodeURIComponent("gh.__jsonp_callbacks["+ id +"]");
+        var prefix = "?";
+        if (url.indexOf("?") >= 0)
+            prefix = "&";
+
+        url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
         if (authUsername && authToken) {
             url += "&login=" + authUsername + "&authToken=" + authToken;
         }
@@ -551,6 +555,8 @@
         return this;
     };
 
+    // ### Gists
+
     gh.gist = function (id) {
         if ( !(this instanceof gh.gist) ) {
             return new gh.gist(id);
@@ -574,4 +580,42 @@
         }
     );
 
-}(window));
+    // ### Objects
+
+    gh.object = function (user, repo, tree_sha) {
+        if (!(this instanceof gh.object)) {
+            return new gh.object(user, repo, tree_sha);
+        }
+        this.user = user;
+        this.repo = repo;
+        this.tree_sha = tree_sha;
+    };
+
+    //Get the contents of a tree by tree SHA
+    gh.object.prototype.tree = function (callback) {
+        jsonp("tree/show/" + this.user + "/" + this.repo + "/" + this.tree_sha, callback);
+        return this;
+    };
+
+    //Get the data about a blob by tree SHA and path
+    gh.object.prototype.blob = function (path, callback) {
+        var url = "blob/show/" + this.user + "/" + this.repo + "/" + this.tree_sha + "/" + path;
+        jsonp(url, callback);
+        return this;
+    };
+
+    //Get only blob meta
+    gh.object.prototype.blob_meta = function (path, callback) {
+        var url = "blob/show/" + this.user + "/" + this.repo + "/" + this.tree_sha + "/" + path + "?meta=1";
+        jsonp(url, callback);
+        return this;
+    };
+
+    //Get list of blobs
+    gh.object.prototype.blob_list = function (callback) {
+        var url = "blob/all/" + this.user + "/" + this.repo + "/" + this.tree_sha;
+        jsonp(url, callback);
+        return this;
+    };
+
+} (window));
