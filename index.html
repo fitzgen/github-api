@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>github.js</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>github.js</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-0'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-0">#</a>
+        </div>
+        <h2>Client-side Javascript API wrapper for GitHub</h2>
+<p>Tries to map one-to-one with the GitHub API V2, but in a Javascripty manner.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">globals</span><span class="p">)</span> <span class="p">{</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-1'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-1">#</a>
+        </div>
+        <p>Before we implement the API methods, we will define all of our private
+variables and helper functions with one <code>var</code> statement.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="kd">var</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-2'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-2">#</a>
+        </div>
+        <p>The username and authentication token of the library's user.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">authUsername</span><span class="p">,</span>
+    <span class="nx">authToken</span><span class="p">,</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-3'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-3">#</a>
+        </div>
+        <p>To save keystrokes when we make JSONP calls to the HTTP API, we will keep
+track of the root from which all V2 urls extend.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">apiRoot</span> <span class="o">=</span> <span class="s2">&quot;https://github.com/api/v2/json/&quot;</span><span class="p">,</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-4'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-4">#</a>
+        </div>
+        <p>Send a JSONP request to the Github API that calls <code>callback</code> with
+the <code>context</code> argument as <code>this</code>.</p>
+<p>The <code>url</code> parameter is concatenated with the apiRoot, for the reasons
+mentioned above. The way that we are supporting non-global, anonymous
+functions is by sticking them in the globally exposed
+<code>gh.__jsonp_callbacks</code> object with a "unique" <code>id</code> that is the current
+time in milliseconds. Once the callback is called, it is deleted from the
+object to prevent memory leaks.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">jsonp</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">id</span> <span class="o">=</span> <span class="o">+</span><span class="k">new</span> <span class="nb">Date</span><span class="p">,</span>
+        <span class="nx">script</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">&quot;script&quot;</span><span class="p">);</span>
+
+        <span class="nx">gh</span><span class="p">.</span><span class="nx">__jsonp_callbacks</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+            <span class="k">delete</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">__jsonp_callbacks</span><span class="p">[</span><span class="nx">id</span><span class="p">];</span>
+            <span class="nx">callback</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">)</span>
+        <span class="p">};</span>
+
+        <span class="nx">url</span> <span class="o">+=</span> <span class="s2">&quot;?callback=&quot;</span> <span class="o">+</span> <span class="nb">encodeURIComponent</span><span class="p">(</span><span class="s2">&quot;gh.__jsonp_callbacks[&quot;</span><span class="o">+</span> <span class="nx">id</span> <span class="o">+</span><span class="s2">&quot;]&quot;</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">authUsername</span> <span class="o">&amp;&amp;</span> <span class="nx">authToken</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">url</span> <span class="o">+=</span> <span class="s2">&quot;&amp;login=&quot;</span> <span class="o">+</span> <span class="nx">authUsername</span> <span class="o">+</span> <span class="s2">&quot;&amp;authToken=&quot;</span> <span class="o">+</span> <span class="nx">authToken</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="nx">script</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">&quot;src&quot;</span><span class="p">,</span> <span class="nx">apiRoot</span> <span class="o">+</span> <span class="nx">url</span><span class="p">);</span>
+
+        <span class="nb">document</span><span class="p">.</span><span class="nx">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;head&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">].</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">script</span><span class="p">);</span>
+    <span class="p">},</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-5'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-5">#</a>
+        </div>
+        <p>Send an HTTP POST. Unfortunately, it isn't possible to support a callback
+with the resulting data. (Please prove me wrong if you can!)</p>
+<p>This is implemented with a hack to get around the cross-domain
+restrictions on ajax calls. Basically, a form is created that will POST
+to the GitHub API URL, stuck inside an iframe so that it won't redirect
+this page, and then submitted.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">post</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">vals</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span>
+        <span class="nx">form</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">&quot;form&quot;</span><span class="p">),</span>
+        <span class="nx">iframe</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">&quot;iframe&quot;</span><span class="p">),</span>
+        <span class="nx">doc</span> <span class="o">=</span> <span class="nx">iframe</span><span class="p">.</span><span class="nx">contentDocument</span> <span class="o">!==</span> <span class="kc">undefined</span> <span class="o">?</span>
+            <span class="nx">iframe</span><span class="p">.</span><span class="nx">contentDocument</span> <span class="o">:</span>
+            <span class="nx">iframe</span><span class="p">.</span><span class="nx">contentWindow</span><span class="p">.</span><span class="nb">document</span><span class="p">;</span>
+        <span class="nx">key</span><span class="p">,</span> <span class="nx">field</span><span class="p">;</span>
+        <span class="nx">vals</span> <span class="o">=</span> <span class="nx">vals</span> <span class="o">||</span> <span class="p">{};</span>
+
+        <span class="nx">form</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="s2">&quot;post&quot;</span><span class="p">);</span>
+        <span class="nx">form</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="nx">apiRoot</span> <span class="o">+</span> <span class="nx">url</span><span class="p">);</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">key</span> <span class="k">in</span> <span class="nx">vals</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">vals</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">field</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">);</span>
+                <span class="nx">field</span><span class="p">.</span><span class="nx">type</span> <span class="o">=</span> <span class="s2">&quot;hidden&quot;</span><span class="p">;</span>
+                <span class="nx">field</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nb">encodeURIComponent</span><span class="p">(</span><span class="nx">vals</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+                <span class="nx">form</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">field</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="nx">iframe</span><span class="p">.</span><span class="nx">setAttribute</span><span class="p">(</span><span class="s2">&quot;style&quot;</span><span class="p">,</span> <span class="s2">&quot;display: none;&quot;</span><span class="p">);</span>
+        <span class="nx">doc</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">form</span><span class="p">);</span>
+        <span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">iframe</span><span class="p">);</span>
+        <span class="nx">form</span><span class="p">.</span><span class="nx">submit</span><span class="p">();</span>
+    <span class="p">},</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-6'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-6">#</a>
+        </div>
+        <p>This helper function will throw a TypeError if the library user is not
+properly authenticated. Otherwise, it silently returns.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">authRequired</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">username</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authUsername</span> <span class="o">||</span> <span class="o">!</span><span class="nx">authToken</span> <span class="o">||</span> <span class="nx">authUsername</span> <span class="o">!==</span> <span class="nx">username</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nx">TypeError</span><span class="p">(</span><span class="s2">&quot;gh: Must be authenticated to do that.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">},</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-7'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-7">#</a>
+        </div>
+        <p>Convert an object to a url parameter string.</p>
+<pre><code>paramify({foo:1, bar:3}) -&gt; "foo=1&amp;bar=3".
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">paramify</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">params</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="nx">key</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">key</span> <span class="k">in</span> <span class="nx">params</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span>
+            <span class="nx">str</span> <span class="o">+=</span> <span class="nx">key</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">+</span> <span class="nx">params</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;&amp;&quot;</span><span class="p">;</span>
+        <span class="k">return</span> <span class="nx">str</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/&amp;$/</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">);</span>
+    <span class="p">},</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-8'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-8">#</a>
+        </div>
+        <p>Expose the global <code>gh</code> variable, through which every API method is
+accessed, but keep a local variable around so we can reference it easily.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span> <span class="o">=</span> <span class="nx">globals</span><span class="p">.</span><span class="nx">gh</span> <span class="o">=</span> <span class="p">{};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-9'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-9">#</a>
+        </div>
+        <p>Psuedo private home for JSONP callbacks (which are required to be global
+by the nature of JSONP, as discussed earlier).</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">__jsonp_callbacks</span> <span class="o">=</span> <span class="p">{};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-10'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-10">#</a>
+        </div>
+        <p>Authenticate as a user. Does not try to validate at any point; that job
+is up to each individual method, which calls <code>authRequired</code> as needed.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">authenticate</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">token</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authUsername</span> <span class="o">=</span> <span class="nx">username</span><span class="p">;</span>
+        <span class="nx">authToken</span> <span class="o">=</span> <span class="nx">token</span><span class="p">;</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-11'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-11">#</a>
+        </div>
+        <h3>Users</h3>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-12'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-12">#</a>
+        </div>
+        <p>The constructor for user objects. Just creating an instance of a user
+doesn't fetch any data from GitHub, you need to get explicit about what
+you want to do that.</p>
+<pre><code>var huddlej = gh.user("huddlej");
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">username</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="p">(</span><span class="k">this</span> <span class="k">instanceof</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">username</span> <span class="o">=</span> <span class="nx">username</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-13'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-13">#</a>
+        </div>
+        <p>Show basic user info; you can get more info if you are authenticated as
+this user.</p>
+<p>gh.user("fitzgen").show(function (data) {
+       console.log(data.user);
+   });</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">show</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;user/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-14'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-14">#</a>
+        </div>
+        <p>Update a user's info. You must be authenticated as this user for this to
+succeed.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">update</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">params</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">postData</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nx">login</span><span class="o">:</span> <span class="nx">authUsername</span><span class="p">,</span>
+            <span class="nx">token</span><span class="o">:</span> <span class="nx">authToken</span>
+        <span class="p">};</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">key</span> <span class="k">in</span> <span class="nx">params</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">postData</span><span class="p">[</span><span class="s2">&quot;values[&quot;</span><span class="o">+</span><span class="nx">key</span><span class="o">+</span><span class="s2">&quot;]&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">encodeURIComponent</span><span class="p">(</span><span class="nx">params</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;user/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">,</span> <span class="nx">postData</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-15'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-15">#</a>
+        </div>
+        <p>Get a list of who this user is following.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">following</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;user/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">username</span> <span class="o">+</span> <span class="s2">&quot;/following&quot;</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-16'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-16">#</a>
+        </div>
+        <p>Find out what other users are following this user.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">followers</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;user/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">username</span> <span class="o">+</span> <span class="s2">&quot;/followers&quot;</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-17'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-17">#</a>
+        </div>
+        <p>Make this user follow some other user. You must be authenticated as this
+user for this to succeed.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">follow</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;user/follow/&quot;</span> <span class="o">+</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-18'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-18">#</a>
+        </div>
+        <p>Make this user quit following the given <code>user</code>. You must be authenticated
+as this user to succeed.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">unfollow</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;user/unfollow/&quot;</span> <span class="o">+</span> <span class="nx">user</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-19'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-19">#</a>
+        </div>
+        <p>Get a list of repositories that this user is watching.</p>
+<pre><code>TODO: example
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">watching</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/watched/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-20'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-20">#</a>
+        </div>
+        <p>Get a list of this user's repositories.</p>
+<pre><code>gh.user("fitzgen").repos(function (data) {
+    alert(data.repositories.length);
+});
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">repos</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">forUser</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-21'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-21">#</a>
+        </div>
+        <p>Make this user fork the repo that lives at
+http://github.com/user/repo. You must be authenticated as this user for
+this to succeed.</p>
+<pre><code>gh.user("fitzgen").forkRepo("brianleroux", "wtfjs");
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">forkRepo</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">username</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/fork/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-22'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-22">#</a>
+        </div>
+        <p>Get a list of all repos that this user can push to (including ones that
+they are just a collaborator on, and do not own). Must be authenticated
+as this user.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">pushable</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="nx">authUsername</span><span class="p">);</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/pushable&quot;</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-23'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-23">#</a>
+        </div>
+        <p>Search users for <code>query</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">user</span><span class="p">.</span><span class="nx">search</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;user/search/&quot;</span> <span class="o">+</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-24'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-24">#</a>
+        </div>
+        <h3>Repositories</h3>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-25'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-25">#</a>
+        </div>
+        <p>This is the base constructor for creating repo objects. Note that this
+won't actually hit the GitHub API until you specify what data you want,
+or what action you wish to take via a prototype method.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="p">(</span><span class="k">this</span> <span class="k">instanceof</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">=</span> <span class="nx">repo</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">=</span> <span class="nx">user</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-26'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-26">#</a>
+        </div>
+        <p>Get basic information on this repo.</p>
+<pre><code>gh.repo("schacon", "grit").show(function (data) {
+    console.log(data.repository.description);
+});
+</code></pre>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">show</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-27'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-27">#</a>
+        </div>
+        <p>Update the information for this repo. Must be authenticated as the
+repository owner. Params can include:</p>
+<ul>
+<li>description</li>
+<li>homepage</li>
+<li>has_wiki</li>
+<li>has_issues</li>
+<li>has_downloads</li>
+</ul>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">update</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">params</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">postData</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nx">login</span><span class="o">:</span> <span class="nx">authUsername</span><span class="p">,</span>
+            <span class="nx">token</span><span class="o">:</span> <span class="nx">authToken</span>
+        <span class="p">};</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">key</span> <span class="k">in</span> <span class="nx">params</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">postData</span><span class="p">[</span><span class="s2">&quot;values[&quot;</span><span class="o">+</span><span class="nx">key</span><span class="o">+</span><span class="s2">&quot;]&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">encodeURIComponent</span><span class="p">(</span><span class="nx">params</span><span class="p">[</span><span class="nx">key</span><span class="p">]);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span><span class="p">,</span> <span class="nx">postData</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-28'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-28">#</a>
+        </div>
+        <p>Get all tags for this repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/tags&quot;</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-29'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-29">#</a>
+        </div>
+        <p>Get all branches in this repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">branches</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/branches&quot;</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-30'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-30">#</a>
+        </div>
+        <p>Gather line count information on the language(s) used in this repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">languages</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;/repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/languages&quot;</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-31'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-31">#</a>
+        </div>
+        <p>Gather data on all the forks of this repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">network</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/network&quot;</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-32'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-32">#</a>
+        </div>
+        <p>All users who have contributed to this repo. Pass <code>true</code> to showAnon if you
+want to see the non-github contributors.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">contributors</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">,</span> <span class="nx">showAnon</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/contributors&quot;</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">showAnon</span><span class="p">)</span>
+            <span class="nx">url</span> <span class="o">+=</span> <span class="s2">&quot;/anon&quot;</span><span class="p">;</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-33'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-33">#</a>
+        </div>
+        <p>Get all of the collaborators for this repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">collaborators</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/collaborators&quot;</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-34'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-34">#</a>
+        </div>
+        <p>Add a collaborator to this project. Must be authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">addCollaborator</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">collaborator</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/collaborators/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/add/&quot;</span> <span class="o">+</span> <span class="nx">collaborator</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-35'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-35">#</a>
+        </div>
+        <p>Remove a collaborator from this project. Must be authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">removeCollaborator</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">collaborator</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/collaborators/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/remove/&quot;</span> <span class="o">+</span> <span class="nx">collaborator</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-36'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-36">#</a>
+        </div>
+        <p>Make this repository private. Authentication required.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">setPrivate</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repo/set/private/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-37'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-37">#</a>
+        </div>
+        <p>Make this repository public. Authentication required.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">setPublic</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repo/set/public/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-38'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-38">#</a>
+        </div>
+        <p>Search for repositories. <code>opts</code> may include <code>start_page</code> or <code>language</code>,
+which must be capitalized.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">search</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">query</span><span class="p">,</span> <span class="nx">opts</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">&quot;repos/search/&quot;</span> <span class="o">+</span> <span class="nx">query</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;+&quot;</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">opts</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">opts</span> <span class="o">=</span> <span class="p">{};</span>
+            <span class="nx">callback</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+            <span class="nx">context</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+        <span class="p">}</span>
+        <span class="nx">url</span> <span class="o">+=</span> <span class="s2">&quot;?&quot;</span> <span class="o">+</span> <span class="nx">paramify</span><span class="p">(</span><span class="nx">opts</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-39'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-39">#</a>
+        </div>
+        <p>Get all the repos that are owned by <code>user</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">forUser</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;repos/show/&quot;</span> <span class="o">+</span> <span class="nx">user</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-40'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-40">#</a>
+        </div>
+        <p>Create a repository. Must be authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">create</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="nx">authUsername</span><span class="p">);</span>
+        <span class="nx">opts</span><span class="p">.</span><span class="nx">name</span> <span class="o">=</span> <span class="nx">name</span><span class="p">;</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/create&quot;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-41'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-41">#</a>
+        </div>
+        <p>Delete a repository. Must be authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">repo</span><span class="p">.</span><span class="nx">del</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="nx">authUsername</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;repos/delete/&quot;</span> <span class="o">+</span> <span class="nx">name</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-42'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-42">#</a>
+        </div>
+        <h3>Commits</h3>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">sha</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="p">(</span><span class="k">this</span> <span class="k">instanceof</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">)</span> <span class="p">)</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">sha</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">=</span> <span class="nx">user</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">=</span> <span class="nx">repo</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">sha</span> <span class="o">=</span> <span class="nx">sha</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">show</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;commits/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">sha</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-43'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-43">#</a>
+        </div>
+        <p>Get a list of all commits on a repos branch.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">.</span><span class="nx">forBranch</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">branch</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;commits/list/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">branch</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-44'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-44">#</a>
+        </div>
+        <p>Get a list of all commits on this path (file or dir).</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">.</span><span class="nx">forPath</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">branch</span><span class="p">,</span> <span class="nx">path</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;commits/list/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">branch</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">path</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-45'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-45">#</a>
+        </div>
+        <h3>Issues</h3>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">number</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="o">!</span><span class="p">(</span><span class="k">this</span> <span class="k">instanceof</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">)</span> <span class="p">)</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nx">gh</span><span class="p">.</span><span class="nx">commit</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">number</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">=</span> <span class="nx">user</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">=</span> <span class="nx">repo</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">number</span> <span class="o">=</span> <span class="nx">number</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-46'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-46">#</a>
+        </div>
+        <p>View this issue's info.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">show</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;issues/show/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-47'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-47">#</a>
+        </div>
+        <p>Get a list of all comments on this issue.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">comments</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;issues/comments/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-48'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-48">#</a>
+        </div>
+        <p>Close this issue.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">close</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/close/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-49'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-49">#</a>
+        </div>
+        <p>Reopen this issue.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">reopen</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/reopen/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-50'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-50">#</a>
+        </div>
+        <p>Reopen this issue.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">update</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">title</span><span class="p">,</span> <span class="nx">body</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">user</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/edit/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">,</span> <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="nx">title</span><span class="p">,</span>
+            <span class="nx">body</span><span class="o">:</span> <span class="nx">body</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-51'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-51">#</a>
+        </div>
+        <p>Add <code>label</code> to this issue. If the label is not yet in the system, it will
+be created.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">addLabel</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/label/add/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">label</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-52'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-52">#</a>
+        </div>
+        <p>Remove a label from this issue.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">removeLabel</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/label/remove/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">label</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-53'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-53">#</a>
+        </div>
+        <p>Comment on this issue as the user that is authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">comment</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">comment</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="nx">authUsername</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;/issues/comment/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">number</span><span class="p">,</span> <span class="p">{</span>
+            <span class="nx">comment</span><span class="o">:</span> <span class="nx">comment</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-54'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-54">#</a>
+        </div>
+        <p>Get all issues' labels for the repo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">labels</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;issues/labels/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-55'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-55">#</a>
+        </div>
+        <p>Open an issue. Must be authenticated.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">open</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">repo</span><span class="p">,</span> <span class="nx">title</span><span class="p">,</span> <span class="nx">body</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">authRequired</span><span class="p">(</span><span class="nx">authUsername</span><span class="p">);</span>
+        <span class="nx">post</span><span class="p">(</span><span class="s2">&quot;issues/open/&quot;</span> <span class="o">+</span> <span class="nx">authUsername</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span><span class="p">,</span> <span class="p">{</span>
+            <span class="nx">title</span><span class="o">:</span> <span class="nx">title</span><span class="p">,</span>
+            <span class="nx">body</span><span class="o">:</span> <span class="nx">body</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-56'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-56">#</a>
+        </div>
+        <p>Search a repository's issue tracker. <code>state</code> can be "open" or "closed".</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">search</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">state</span><span class="p">,</span> <span class="nx">query</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;/issues/search/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">state</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">query</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span></pre></div></pre></div>
+      </td>
+    </tr><tr id='section-57'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-57">#</a>
+        </div>
+        <p>Get a list of issues for the given repo. <code>state</code> can be "open" or
+"closed".</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><div class="highlight"><pre>    <span class="nx">gh</span><span class="p">.</span><span class="nx">issue</span><span class="p">.</span><span class="nx">list</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">repo</span><span class="p">,</span> <span class="nx">state</span><span class="p">,</span> <span class="nx">callback</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">jsonp</span><span class="p">(</span><span class="s2">&quot;issues/list/&quot;</span> <span class="o">+</span> <span class="nx">user</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">repo</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nx">state</span><span class="p">,</span>
+              <span class="nx">callback</span><span class="p">,</span>
+              <span class="nx">context</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">};</span>
+
+<span class="p">}(</span><span class="nb">window</span><span class="p">));</span>
+
+</pre></div></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
