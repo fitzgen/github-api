@@ -588,61 +588,52 @@
 
     // ### Objects
 
-    gh.object = function (user, repo, sha) {
+    gh.object = function (user, repo) {
         if (!(this instanceof gh.object)) {
-            return new gh.object(user, repo, sha);
+            return new gh.object(user, repo);
         }
         this.user = user;
         this.repo = repo;
-        this.sha = sha;
     };
 
     // Get the contents of a tree by tree SHA
-    gh.object.prototype.tree = function (callback, context) {
-        jsonp("tree/show/" + this.user + "/" + this.repo + "/" + this.sha,
+    gh.object.prototype.tree = function (sha, callback, context) {
+        jsonp("tree/show/" + this.user + "/" + this.repo + "/" + sha,
               callback,
               context);
         return this;
     };
 
     // Get the data about a blob by tree SHA and path
-    gh.object.prototype.blob = function (path, callback, context) {
-        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + this.sha + "/" + path,
+    gh.object.prototype.blob = function (path, sha, callback, context) {
+        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha + "/" + path,
               callback,
               context);
         return this;
     };
 
     // Get only blob meta
-    gh.object.prototype.blobMeta = function (path, callback, context) {
-        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + this.sha + "/" + path + "?meta=1",
+    gh.object.prototype.blobMeta = function (path, sha, callback, context) {
+        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha + "/" + path + "?meta=1",
               callback,
               context);
         return this;
     };
 
     // Get list of blobs
-    gh.object.prototype.blobList = function (callback, context) {
-        jsonp("blob/all/" + this.user + "/" + this.repo + "/" + this.sha,
+    gh.object.prototype.blobAll = function (branch, callback, context) {
+        jsonp("blob/all/" + this.user + "/" + this.repo + "/" + branch,
               callback,
               context);
         return this;
     };
 
     // Get meta of each blob in tree
-    gh.object.prototype.blobFull = function (callback, context) {
-        jsonp("blob/full/" + this.user + "/" + this.repo + "/" + this.sha,
+    gh.object.prototype.blobFull = function (sha, callback, context) {
+        jsonp("blob/full/" + this.user + "/" + this.repo + "/" + sha,
               callback,
               context);
         return this;        
-    };
-
-    // Get data for given blob
-    gh.object.prototype.blobData = function (sha, callback, context) {
-        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha,
-              callback,
-              context);
-        return this;            
     };
 
 }(window));
