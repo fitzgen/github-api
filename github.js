@@ -29,6 +29,12 @@
         var id = +new Date,
         script = document.createElement("script");
 
+        // prevention error fix
+        // if gh object calls are to frequent, there is a change of collision in id
+        // it has been reproduced with my tests, giving a runtime error, because the callback with same id have already been destroyed
+        if(gh.__jsonp_callbacks[id]!=null)
+            id+= +Math.random();
+
         gh.__jsonp_callbacks[id] = function () {
             delete gh.__jsonp_callbacks[id];
             callback.apply(context, arguments);
@@ -621,6 +627,22 @@
               callback,
               context);
         return this;
+    };
+
+    // Get meta of each blob in tree
+    gh.object.prototype.blobFull = function (callback, context) {
+        jsonp("blob/full/" + this.user + "/" + this.repo + "/" + this.sha,
+              callback,
+              context);
+        return this;        
+    };
+
+    // Get data for given blob
+    gh.object.prototype.blobData = function (sha, callback, context) {
+        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha,
+              callback,
+              context);
+        return this;            
     };
 
 }(window));
