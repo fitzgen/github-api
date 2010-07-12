@@ -629,4 +629,20 @@
         return this;
     };
 
+    // Get meta of each blob in tree
+    gh.object.prototype.blobFull = function (callback, context) {
+        jsonp("blob/full/" + this.user + "/" + this.repo + "/" + this.sha,
+              callback,
+              context);
+        return this;        
+    };
+
+    // Get data for given blob
+    gh.object.prototype.blobData = function (sha, callback, context) {
+        jsonp("blob/show/" + this.user + "/" + this.repo + "/" + sha,
+              callback,
+              context);
+        return this;            
+    };
+
 }(window));
