@@ -29,6 +29,12 @@
         var id = +new Date,
         script = document.createElement("script");
 
+        // prevention error fix
+        // if gh object calls are to frequent, there is a change of collision in id
+        // it has been reproduced with my tests, giving a runtime error, because the callback with same id have already been destroyed
+        if(gh.__jsonp_callbacks[id]!=null)
+            id+= +Math.random();
+
         gh.__jsonp_callbacks[id] = function () {
             delete gh.__jsonp_callbacks[id];
             callback.apply(context, arguments);
