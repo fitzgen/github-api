@@ -636,4 +636,22 @@
         return this;        
     };
 
+    gh.network = function(user, repo) {
+        if (!(this instanceof gh.network)) {
+            return new gh.network(user, repo);
+        }
+        this.user = user;
+        this.repo = repo;
+    }
+
+    gh.network.prototype.meta = withTempApiRoot(
+        "http://github.com/", 
+        function (callback, context) {
+            jsonp(this.user + "/" + this.repo + "/network_meta",
+                callback,
+                context);
+            return this;
+        }
+   );
+
 }(window));
