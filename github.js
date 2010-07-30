@@ -654,4 +654,14 @@
         }
    );
 
+    gh.network.prototype.data = withTempApiRoot(
+        "http://github.com/",
+        function (nethash, start, end, callback, context) {
+            jsonp(this.user + "/" + this.repo + "/network_data_chunk?" + nethash + "&" + start + "&" + end,
+                callback,
+                context);
+            return this;
+        }
+   );
+
 }(window));
