@@ -24,10 +24,10 @@ COMPLETE
 * Commits
 * Issues
 * Gists
+* Network
+* Objects
 
 TODO
 ====
 
-* Objects
-* Network
 * Documentation
