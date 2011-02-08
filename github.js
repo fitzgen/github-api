@@ -254,7 +254,7 @@
 
     // Search users for `query`.
     gh.user.search = function (query, callback, context) {
-        jsonp("user/search/" + query, callback, context);
+        jsonp("user/search/" + query.replace(" ", "+"), callback, context);
         return this;
     };
 
