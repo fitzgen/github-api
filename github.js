@@ -258,6 +258,13 @@
         return this;
     };
 
+    // Search users by email for `query`.
+    gh.user.search_email = function (query, callback, context) {
+        jsonp("user/email/" + query, callback, context);
+        return this;
+    };
+
+
     // ### Repositories
 
     // This is the base constructor for creating repo objects. Note that this
