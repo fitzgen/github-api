@@ -329,7 +329,7 @@
 
     // Gather line count information on the language(s) used in this repo.
     gh.repo.prototype.languages = function (callback, context) {
-        jsonp("/repos/show/" + this.user + "/" + this.repo + "/languages",
+        jsonp("repos/show/" + this.user + "/" + this.repo + "/languages",
               callback,
               context);
         return this;
