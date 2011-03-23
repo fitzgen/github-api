@@ -234,25 +234,24 @@
       var repos = [];
       var username = this.username;
 
-      page = 1;
+      var page = 1;
 
-      var _exitCallback = function (data) { callback.apply(context, arguments) };
+      var exitCallback = function (repos) { callback.call(context, { repositories: repos }) };
       
-      var _callback = function (data) {
+      var pageLoop = function (data) {
         repos = repos.concat(data.repositories);
-        console.log(data);
         var reposLength = data.repositories.length;
 
         if (reposLength == 0) {
-          _exitCallback(repos);
+          exitCallback(repos);
         }
         else {
           page += 1;
-          gh.repo.forUser(username, _callback, context, page);
+          gh.repo.forUser(username, pageLoop, context, page);
         }
       }
 
-      gh.repo.forUser(username, _callback, context, page);
+      gh.repo.forUser(username, pageLoop, context, page);
       
       return this;
     }
