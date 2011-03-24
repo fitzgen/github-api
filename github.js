@@ -215,13 +215,44 @@
         return this;
     };
 
-    // Get a list of this user's repositories.
+    // Get a list of this user's repositories, 30 per page
     //
     //     gh.user("fitzgen").repos(function (data) {
-    //         alert(data.repositories.length);
+    //         data.repositories.forEach(function (repo) {
+    //             ...
+    //         });
     //     });
-    gh.user.prototype.repos = function (callback, context) {
-        gh.repo.forUser(this.username, callback, context);
+    gh.user.prototype.repos = function (callback, context, page) {
+        gh.repo.forUser(this.username, callback, context, page);
+        return this;
+    };
+
+    // Get a list of all repos for this user.
+    //
+    //     gh.user("fitzgen").allRepos(function (data) {
+    //          alert(data.repositories.length);
+    //     });
+    gh.user.prototype.allRepos = function (callback, context) {
+        var repos = [],
+            username = this.username,
+            page = 1;
+
+        function exitCallback () {
+            callback.call(context, { repositories: repos });
+        }
+
+        function pageLoop (data) {
+            if (data.repositories.length == 0) {
+                exitCallback();
+            } else {
+                repos = repos.concat(data.repositories);
+                page += 1;
+                gh.repo.forUser(username, pageLoop, context, page);
+            }
+        }
+
+        gh.repo.forUser(username, pageLoop, context, page);
+
         return this;
     };
 
@@ -398,8 +429,11 @@
     };
 
     // Get all the repos that are owned by `user`.
-    gh.repo.forUser = function (user, callback, context) {
-        jsonp("repos/show/" + user, callback, context);
+    gh.repo.forUser = function (user, callback, context, page) {
+        if (!page)
+          page = 1;
+
+        jsonp("repos/show/" + user + '?page=' + page, callback, context);
         return this;
     };
 
