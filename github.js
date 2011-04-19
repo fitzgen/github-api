@@ -697,8 +697,8 @@
             return this;
         }
     );
-    
-	// ### Pull Requests
+
+    // ### Pull Requests
 
     gh.pulls = function(user, repo) {
         if (!(this instanceof gh.pulls)) {
@@ -707,14 +707,14 @@
         this.user = user;
         this.repo = repo;
     };
-    
+
     // Get all pull requests for the repo
     //
-	//	gh.pulls("fitzgen", "github-api").allPulls(function (data) {
-	//		data.pulls.forEach(function (pull) {
-    //			console.log("Title: " + pull.title);
-    //		});
-    //	});
+    //     gh.pulls("fitzgen", "github-api").allPulls(function (data) {
+    //         data.pulls.forEach(function (pull) {
+    //             console.log("Title: " + pull.title);
+    //         });
+    //     });
     gh.pulls.prototype.allPulls = function (callback, context) {
         jsonp("pulls/" + this.user + "/" + this.repo, callback, context);
         return this;
@@ -722,28 +722,28 @@
 
     // Get pull requests filtered by state. `state` can be "open" or "closed".
     //
-	//	gh.pulls("fitzgen", "github-api").forState("closed", function (data) {
-	//		data.pulls.forEach(function (pull) {
-    //			console.log("Title: " + pull.title + " State: " + pull.state);
-    //		});
-    //	});
+    //     gh.pulls("fitzgen", "github-api").forState("closed", function (data) {
+    //         data.pulls.forEach(function (pull) {
+    //             console.log("Title: " + pull.title + " State: " + pull.state);
+    //         });
+    //     });
     gh.pulls.prototype.forState = function (state, callback, context) {
-	    jsonp("pulls/" + this.user + "/" + this.repo + "/" + state, callback, context);
+        jsonp("pulls/" + this.user + "/" + this.repo + "/" + state, callback, context);
         return this;
     };
-    
+
     // Get pull requests by number
     //
-    //  Important: This call returns a single object called "pull" instead of multiple "pulls" objects!
+    // Important: This call returns a single object called "pull" instead of multiple "pulls" objects!
     //
-	//	gh.pulls("fitzgen", "github-api").forNumber("1", function (data) {
-	//		console.log("Title: " + data.pull.title + " Number: " + data.pull.number);
-    //	});
+    //     gh.pulls("fitzgen", "github-api").forNumber("1", function (data) {
+    //         console.log("Title: " + data.pull.title + " Number: " + data.pull.number);
+    //     });
     gh.pulls.prototype.forNumber = function (number, callback, context) {
-	    jsonp("pulls/" + this.user + "/" + this.repo + "/" + number, callback, context);
+        jsonp("pulls/" + this.user + "/" + this.repo + "/" + number, callback, context);
         return this;
     };
-    
+
     //TODO: Creating a Pull Request
 
 }(window));
