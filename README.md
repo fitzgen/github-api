@@ -1,3 +1,6 @@
+github-api, Javascript bindings for the Github API
+==================================================
+
 Exposes `gh` to the global environment. Tries to follow both the form of Github
 HTTP API and JS style.
 
@@ -16,7 +19,7 @@ HTTP API and JS style.
     wujs.update({ has_wiki: 0 }); // Unfortunately, no callbacks with POSTs :(
 
 COMPLETE
-========
+--------
 
 * Authentication
 * Users
@@ -27,7 +30,17 @@ COMPLETE
 * Network
 * Objects
 
+Integrated with Rails 3.1
+-------------------------
+
+	gem 'github-api-rails'
+
+javascript
+
+	//= require 'github-api'
+
+
 TODO
-====
+----
 
 * Documentation
