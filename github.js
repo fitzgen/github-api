@@ -425,6 +425,7 @@
             context = arguments[2];
         }
         url += "?" + paramify(opts);
+        jsonp(url, callback, context);
         return this;
     };
 
