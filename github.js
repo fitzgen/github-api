@@ -60,7 +60,12 @@
     post = function (url, vals) {
         var
         form = document.createElement("form"),
-        iframe = document.createElement("iframe"),
+        iframe = document.createElement("iframe");
+
+        // Need to insert the iframe now so contentDocument and contentWindow are defined
+        document.body.appendChild(iframe);
+
+        var
         doc = iframe.contentDocument !== undefined ?
             iframe.contentDocument :
             iframe.contentWindow.document,
@@ -80,7 +85,6 @@
 
         iframe.setAttribute("style", "display: none;");
         doc.body.appendChild(form);
-        document.body.appendChild(iframe);
         form.submit();
     },
 
