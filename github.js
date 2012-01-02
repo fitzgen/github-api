@@ -215,6 +215,20 @@
         return this;
     };
 
+    // Get a list of all organization repos this user has access to.
+    //
+    //     gh.authenticate("fitzgen", <token>);
+    //     user = gh.user("fitzen");
+    //
+    //     user.allOrgRepos(function (data) {
+    //         alert(data.repositories.length);
+    //     });
+    gh.user.prototype.allOrgRepos = function (callback) {
+       authRequired(this.username);
+       jsonp("organizations/repositories", callback);
+       return this;
+    };
+
     // Get a list of this user's repositories, 30 per page
     //
     //     gh.user("fitzgen").repos(function (data) {
