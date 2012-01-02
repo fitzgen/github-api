@@ -11,6 +11,8 @@
     // The username and authentication token of the library's user.
     authUsername,
     authToken,
+    // The access token of OAuth user, can be used instead of authUsername + authToken
+    authAccessToken
 
     // To save keystrokes when we make JSONP calls to the HTTP API, we will keep
     // track of the root from which all V2 urls extend.
@@ -44,6 +46,9 @@
         url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
         if (authUsername && authToken) {
             url += "&login=" + authUsername + "&authToken=" + authToken;
+        }
+        if (authAccessToken) {
+            url += "&access_token=" + authAccessToken;
         }
         script.setAttribute("src", apiRoot + url);
 
@@ -87,7 +92,7 @@
     // This helper function will throw a TypeError if the library user is not
     // properly authenticated. Otherwise, it silently returns.
     authRequired = function (username) {
-        if (!authUsername || !authToken || authUsername !== username) {
+        if ((!authUsername || !authToken || authUsername !== username) && !authAccessToken) {
             throw new TypeError("gh: Must be authenticated to do that.");
         }
     },
@@ -123,9 +128,11 @@
 
     // Authenticate as a user. Does not try to validate at any point; that job
     // is up to each individual method, which calls `authRequired` as needed.
-    gh.authenticate = function (username, token) {
+    // If using OAuth access token, you may pass `null` for `username` and `token` args.
+    gh.authenticate = function (username, token, accessToken) {
         authUsername = username;
         authToken = token;
+        authAccessToken = accessToken;
         return this;
     };
 
