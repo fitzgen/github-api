@@ -43,7 +43,7 @@
 
         url += prefix + "callback=" + encodeURIComponent("gh.__jsonp_callbacks[" + id + "]");
         if (authUsername && authToken) {
-            url += "&login=" + authUsername + "&authToken=" + authToken;
+            url += "&login=" + authUsername + "&token=" + authToken;
         }
         script.setAttribute("src", apiRoot + url);
 
