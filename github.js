@@ -161,7 +161,14 @@
     // Update a user's info. You must be authenticated as this user for this to
     // succeed.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").update({name: "Nick Fitzgerald"});
+    //
+    //     Possible attributes to update include:
+    //       - name
+    //       - email
+    //       - blog
+    //       - company
+    //       - location
     gh.user.prototype.update = function (params) {
         authRequired(this.username);
         var key, postData = {
@@ -179,14 +186,18 @@
 
     // Get a list of who this user is following.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").following(function (data) {
+    //         console.log(data.users);
+    //     });
     gh.user.prototype.following = function (callback, context) {
         jsonp("user/show/" + this.username + "/following", callback, context);
     };
 
     // Find out what other users are following this user.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").followers(function (data) {
+    //         console.log(data.users);
+    //     });
     gh.user.prototype.followers = function (callback, context) {
         jsonp("user/show/" + this.username + "/followers", callback, context);
     };
@@ -194,7 +205,7 @@
     // Make this user follow some other user. You must be authenticated as this
     // user for this to succeed.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").follow("mikepack");
     gh.user.prototype.follow = function (user) {
         authRequired.call(this);
         post("user/follow/" + user);
@@ -204,7 +215,7 @@
     // Make this user quit following the given `user`. You must be authenticated
     // as this user to succeed.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").unfollow("mikepack");
     gh.user.prototype.unfollow = function (user) {
         authRequired.call(this);
         post("user/unfollow/" + user);
@@ -213,7 +224,9 @@
 
     // Get a list of repositories that this user is watching.
     //
-    //     TODO: example
+    //     gh.user("fitzgen").watching(function (data) {
+    //         console.log(data.repositories);
+    //     });
     gh.user.prototype.watching = function (callback, context) {
         jsonp("repos/watched/" + this.username, callback, context);
         return this;
