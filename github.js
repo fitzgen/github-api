@@ -12,7 +12,7 @@
     authUsername,
     authToken,
     // The access token of OAuth user, can be used instead of authUsername + authToken
-    authAccessToken
+    authAccessToken,
 
     // To save keystrokes when we make JSONP calls to the HTTP API, we will keep
     // track of the root from which all V2 urls extend.
