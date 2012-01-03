@@ -232,6 +232,16 @@
         return this;
     };
 
+    // Get a list of organizations that this user belongs to.
+    //
+    //     gh.user("fitzgen").organizations( function(data) {
+    //         alert(data.organizations.length);
+    //     });
+    gh.user.prototype.orgs = function (callback, context) {
+       jsonp("user/show/" + this.username + "/organizations", callback, context);
+       return this
+    };
+
     // Get a list of this user's repositories, 30 per page
     //
     //     gh.user("fitzgen").repos(function (data) {
