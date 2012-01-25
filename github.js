@@ -538,11 +538,28 @@
 
     gh.issue = function (user, repo, number) {
         if ( !(this instanceof gh.issue) )
-            return new gh.commit(user, repo, number);
+            return new gh.issue(user, repo, number);
         this.user = user;
         this.repo = repo;
         this.number = number;
     };
+    
+    //View open issues
+    gh.issue.prototype.openIssues = function (callback, context)  {
+        jsonp("issues/list/" + this.user + "/" + this.repo + "/open",
+              callback,
+              context);
+        return this;
+    };
+    
+    //View closed issues
+    gh.issue.prototype.closedIssues = function (callback, context)  {
+        jsonp("issues/list/" + this.user + "/" + this.repo + "/closed",
+              callback,
+              context);
+        return this;
+    };
+        
 
     // View this issue's info.
     gh.issue.prototype.show = function (callback, context) {
